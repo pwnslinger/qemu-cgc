@@ -26,6 +26,8 @@
 #define CGC_MAGIC_PAGE_ADDR 0x4347c000
 #define CGC_INITIAL_SP 0xbaaaaffcu
 
+#define QIRA_TRACKING
+
 /* This struct is used to hold certain information about the image.
  * Basically, it replicates in user space what would be certain
  * task_struct fields in the kernel
@@ -335,6 +337,11 @@ static inline int access_ok(int type, abi_ulong addr, abi_ulong size)
 abi_long copy_from_user(void *hptr, abi_ulong gaddr, size_t len);
 abi_long copy_to_user(abi_ulong gaddr, void *hptr, size_t len);
 
+#ifdef QIRA_TRACKING
+void track_kernel_read(void *host_addr, target_ulong guest_addr, long len);
+void track_kernel_write(void *host_addr, target_ulong guest_addr, long len);
+#endif
+
 /* Functions for accessing guest memory.  The tget and tput functions
    read/write single values, byteswapping as necessary.  The lock_user function
    gets a pointer to a contiguous area of guest memory, but does not perform
@@ -345,6 +352,7 @@ abi_long copy_to_user(abi_ulong gaddr, void *hptr, size_t len);
    host area will have the same contents as the guest.  */
 static inline void *lock_user(int type, abi_ulong guest_addr, long len, int copy)
 {
+    void *ret;
     if (!access_ok(type, guest_addr, len))
         return NULL;
 #ifdef DEBUG_REMAP
@@ -355,11 +363,21 @@ static inline void *lock_user(int type, abi_ulong guest_addr, long len, int copy
             memcpy(addr, g2h(guest_addr), len);
         else
             memset(addr, 0, len);
-        return addr;
+        //return addr;
+        ret = addr;
     }
 #else
-    return g2h(guest_addr);
+    //return g2h(guest_addr);
+    ret = g2h(guest_addr);
 #endif
+
+
+#ifdef QIRA_TRACKING
+    if (type == VERIFY_READ) {
+      track_kernel_read(ret, guest_addr, len);
+    }
+#endif
+    return ret;
 }
 
 /* Unlock an area of guest memory.  The first LEN bytes must be
@@ -368,6 +386,12 @@ static inline void *lock_user(int type, abi_ulong guest_addr, long len, int copy
 static inline void unlock_user(void *host_ptr, abi_ulong guest_addr,
                                long len)
 {
+
+#ifdef QIRA_TRACKING
+    if (type == VERIFY_READ) {
+      track_kernel_write(host_ptr, guest_addr, len);
+    }
+#endif
 
 #ifdef DEBUG_REMAP
     if (!host_ptr)
