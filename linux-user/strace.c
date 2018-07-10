@@ -11,6 +11,16 @@
 #include <sched.h>
 #include "qemu.h"
 
+#undef TARGET_ABI_FMT_lx
+#ifdef TARGET_ABI32
+#define TARGET_ABI_FMT_lx "%x"
+#else
+#define TARGET_ABI_FMT_lx "%llx"
+#endif
+
+extern FILE *GLOBAL_strace_file;
+#define gemu_log(x...) { fprintf(GLOBAL_strace_file, x); fflush(GLOBAL_strace_file); }
+
 int do_strace=0;
 
 
@@ -93,6 +103,7 @@ print_timeval(abi_ulong tv_addr, int last)
 }
 
 
+uint32_t get_current_clnum(void);
 /*
  * The public interface to this module.
  */
@@ -101,6 +112,7 @@ print_syscall(int num,
               abi_long arg1, abi_long arg2, abi_long arg3,
               abi_long arg4, abi_long arg5, abi_long arg6)
 {
+    qemu_log("%d ", get_current_clnum() );
     gemu_log("%d ", getpid() );
     switch (num) {
     case TARGET_NR_terminate:
