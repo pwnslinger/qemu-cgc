@@ -538,7 +538,7 @@ abi_ulong get_max_sinkhole(size_t length) {
     current = sinkhole_head;
     while(current) {
         if (current->length >= length && current->addr > max_addr) {
-            max_addr = current->addr; 
+            max_addr = current->addr;
             max = current;
         }
         current = current->next;
@@ -899,7 +899,7 @@ static abi_long do_deallocate(abi_ulong start, abi_ulong len)
         mmap_next_start += aligned_len;
     else /* add a sinkhole */
         add_sinkhole(start, aligned_len);
-    
+
     return ret;
 }
 
@@ -962,6 +962,8 @@ static abi_long do_fdwait(abi_int n, abi_ulong rfd_addr, abi_ulong wfd_addr, abi
     return 0;
 }
 
+
+extern void add_to_librarymap(const char *name, abi_ulong begin, abi_ulong end);
 
 /* do_syscall() should always have a single exit point at the end so
    that actions, such as logging of syscall results, can be performed.
@@ -1030,6 +1032,21 @@ abi_long do_syscall(void *cpu_env, int num, abi_long arg1,
 #endif
     if(do_strace)
         print_syscall_ret(num, ret);
+
+#ifdef TARGET_NR_allocate
+    if (num == TARGET_NR_allocate){
+#endif
+        int fd = arg5;
+        target_ulong mapaddr = ret;
+        target_ulong size = arg1;
+        if (fd >= 30){
+            add_to_librarymap("unknown", mapaddr, mapaddr+size);
+        }
+    }else if (num == TARGET_NR_receive){
+        /* here we could store the fd->libname mapping */
+    }else if (num == TARGET_NR_terminate){
+        /* here we could clear the fd->libname mapping */
+    }
     if (!((ret >= 0) && (ret <= 6))) { /* CGC syscalls return either 0 or an error */
         fprintf(stderr, "qemu: INTERNAL ERROR: syscall %d tried to return %d, but all CGC syscall return either 0 or one of the CGC_Exxx (positive) values.\n", num, ret);
         exit(-33);
