@@ -195,7 +195,7 @@ static int print_insn_od_target(bfd_vma pc, disassemble_info *info)
            bit 16 indicates little endian.
     other targets - unused
  */
-void target_disas(FILE *out, CPUArchState *env, target_ulong code,
+void real_target_disas(FILE *out, CPUArchState *env, target_ulong code,
                   target_ulong size, int flags)
 {
     target_ulong pc;
@@ -265,7 +265,7 @@ void target_disas(FILE *out, CPUArchState *env, target_ulong code,
         s.info.mach = bfd_mach_ppc;
 #endif
     }
-    s.info.disassembler_options = (char *)"any";
+    s.info.disassembler_options = (char *)"intel";
     print_insn = print_insn_ppc;
 #elif defined(TARGET_M68K)
     print_insn = print_insn_m68k;
